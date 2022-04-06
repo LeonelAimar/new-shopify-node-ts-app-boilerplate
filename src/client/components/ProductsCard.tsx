@@ -58,7 +58,7 @@ export function ProductsCard() {
                 remove them at any time.
             </p>
             <Heading element="h4">
-                TOTAL PRODUCTS!
+                TOTAL PRODUCTS
                 <DisplayText size="medium">
                 <TextStyle variation="strong">{productCount}</TextStyle>
                 </DisplayText>
