@@ -75,9 +75,6 @@ export function HomePage() {
             </Stack>
           </Card>
         </Layout.Section>
-        <Layout.Section secondary>
-          <ProductsCard />
-        </Layout.Section>
       </Layout>
     </Page>
   );

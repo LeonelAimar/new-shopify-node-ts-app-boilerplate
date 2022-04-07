@@ -8,8 +8,8 @@ export const setPolicyHeaders = ( req: Request, res: Response, next: NextFunctio
         res.setHeader(
             "Content-Security-Policy",
             `frame-ancestors https://${shop} https://admin.shopify.com;`
-        );
-    } else {
+            );
+        } else {
         res.setHeader("Content-Security-Policy", `frame-ancestors 'none';`);
     }
     next();

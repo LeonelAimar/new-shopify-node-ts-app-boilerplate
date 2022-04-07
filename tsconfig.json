@@ -19,7 +19,7 @@
         "paths": {
             "*": [
                 "node_modules/*"
-            ]
+            ],
         },
         "resolveJsonModule": true,
         "isolatedModules": true,

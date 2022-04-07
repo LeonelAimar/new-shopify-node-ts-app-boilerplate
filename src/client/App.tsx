@@ -1,73 +1,67 @@
-import {
-  ApolloClient,
-  ApolloProvider,
-  HttpLink,
-  InMemoryCache,
-} from "@apollo/client";
-import {
-  Provider as AppBridgeProvider,
-  useAppBridge,
-} from "@shopify/app-bridge-react";
-import { authenticatedFetch } from "@shopify/app-bridge-utils";
-import { ClientApplication } from "@shopify/app-bridge";
-import { Redirect } from "@shopify/app-bridge/actions";
-import { AppProvider as PolarisProvider } from "@shopify/polaris";
-import translations from "@shopify/polaris/locales/en.json";
 import "@shopify/polaris/build/esm/styles.css";
+import { CustomStyleSheet } from "./interfaces/AppInterfaces";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Providers } from "./Providers";
 
-import { HomePage } from "./components/HomePage";
+
+import CustomRouter from "./router/CustomRouter";
+import { Button, ButtonGroup } from "@shopify/polaris";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export default function App() {
-  return (
-    <PolarisProvider i18n={translations}>
-      <AppBridgeProvider
-        config={{
-          apiKey: process.env.SHOPIFY_API_KEY,
-          host: new URLSearchParams(location.search).get("host"),
-          forceRedirect: true,
-        }}
-      >
-        <MyProvider>
-          <HomePage />
-        </MyProvider>
-      </AppBridgeProvider>
-    </PolarisProvider>
-  );
+    const location = useLocation()
+    const navigate = useNavigate()
+    const nowPath = useRef(location.pathname)
+
+    useEffect(() => {
+        nowPath.current = location.pathname
+    }, [location.pathname])
+
+    const handleFirstButtonClick = useCallback(() => {
+        if (nowPath.current === '/') return;
+        navigate('/')
+    }, [nowPath])
+
+    const handleSecondButtonClick = useCallback(() => {
+        if (nowPath.current === '/config') return;
+        navigate('/config')
+    }, [nowPath]);
+
+    return (
+        <Providers>
+            <nav
+                style={styles.topNav}
+            >
+                <ButtonGroup segmented>
+                    <Button pressed={location.pathname === '/'} 
+                        onClick={handleFirstButtonClick}
+                    >
+                        Home
+                    </Button>
+                    <Button pressed={location.pathname === '/config'} 
+                        onClick={handleSecondButtonClick}
+                    >
+                        Config
+                    </Button>
+                </ButtonGroup>
+            </nav>
+            <CustomRouter />
+        </Providers>
+    );
 }
 
-const MyProvider: React.FC = ({ children }) => {
-    const app = useAppBridge();
-
-    const client = new ApolloClient({
-        cache: new InMemoryCache(),
-        link: new HttpLink({
-            credentials: "include",
-            fetch: userLoggedInFetch(app),
-        }),
-    });
-
-    return <ApolloProvider client={client}>{children}</ApolloProvider>;
-}
-
-export function userLoggedInFetch( app: ClientApplication<any> ): ( uri: string, options: any ) => Promise<Response> {
-    const fetchFunction = authenticatedFetch(app);
-    
-    return async (uri, options) => {
-        const response = await fetchFunction(uri, options);
-        
-        if (
-            response.headers.get("X-Shopify-API-Request-Failure-Reauthorize") === "1"
-        ) {
-            const authUrlHeader = response.headers.get(
-                "X-Shopify-API-Request-Failure-Reauthorize-Url"
-            );
-            console.log(authUrlHeader)
-
-            const redirect = Redirect.create(app);
-            redirect.dispatch(Redirect.Action.APP, authUrlHeader || `/auth`);
-            return null;
-        }
-
-        return response;
-    };
+const styles: CustomStyleSheet = {
+    topNav: {
+        marginBottom: '1rem',
+        display: 'flex',
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: '1rem'
+    },
+    centerNav: {
+        width: '20%',
+        display: 'flex',
+        justifyContent: 'space-between'
+    }
 }
