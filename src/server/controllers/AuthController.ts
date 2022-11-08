@@ -1,6 +1,7 @@
 import { AuthQuery, Shopify } from '@shopify/shopify-api';
 import { Request, Response } from 'express';
 import { server } from '../index.js'
+import CONFIG from '../config/config';
 
 // Helpers
 import topLevelAuthRedirect from '../helpers/top-level-auth-redirect.js';
@@ -14,8 +15,8 @@ class AuthController {
         const redirectUrl = await Shopify.Auth.beginAuth(
             req,
             res,
-            req.query.shop as string,
-            "/auth/callback",
+            req.query.shop as string || CONFIG.SHOPIFY_APP.SHOP,
+            '/auth/callback',
             server.app.get("use-online-tokens")
         );
       

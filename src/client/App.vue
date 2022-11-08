@@ -1,16 +1,25 @@
 <template>
 	<main class="container-fluid">
-       <h1>APP TEST!!</h1> 
+        <Header />
+		<router-view/>
 	</main>
 </template>
 
-<script lang="ts" setup>
-import { onMounted } from 'vue'
+<script lang="ts">
+import { defineComponent } from 'vue'
+import AppStore from './store/AppStore'
 import ShopifyApp from './providers/ShopifyAppProvider'
 
-onMounted(() => {
-    console.log('MOUNTED!!')
-    console.log(ShopifyApp)
+import Header from './components/Partials/Header.vue'
+
+export default defineComponent({
+    components: {
+        Header,
+    },
+    setup() {
+        (async () => AppStore.methods.initFetchings())()
+        console.log(ShopifyApp.getState())
+    },
 })
 </script>
 

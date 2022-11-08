@@ -1,4 +1,3 @@
-import react from "@vitejs/plugin-react";
 import vue from "@vitejs/plugin-vue";
 import path, { resolve } from 'path'
 import "dotenv/config";
@@ -8,12 +7,13 @@ import "dotenv/config";
  */
 export default {
     define: {
-        "process.env.SHOPIFY_API_KEY": JSON.stringify(process.env.SHOPIFY_API_KEY),
+        "process.env.SHOPIFY_API_KEY": JSON.stringify(process.env.API_KEY),
+        "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV)
     },
     plugins: [vue()],
-    // resolve: {
-    //     alias: [
-    //         { find: '@', replacement: resolve(__dirname, 'src/client') }
-    //     ]
-    // }
+    resolve: {
+        alias: [
+            { find: '@', replacement: resolve(__dirname, 'src/client') }
+        ]
+    }
 };

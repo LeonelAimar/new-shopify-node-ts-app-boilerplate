@@ -1,31 +1,50 @@
-export interface CustomStyleSheet {
-    [key: string]: React.CSSProperties;
+export enum AppMode {
+    SANDBOX = 'SANDBOX',
+    PRODUCTION = 'PRODUCTION',
+    DISABLED = 'DISABLED'
 }
 
-export interface BaseProviderComponent {
-    children:       JSX.Element | JSX.Element[];
+export interface IAppConfig {
+    _id:                        string;
+    mode:                       AppMode;
+    apiSandboxUrl:              string;
+    apiProductionUrl:           string;
+    apiSandboxKey:              string;
+    apiProductionKey:           string;
+    apiSandboxAccessToken:      string;
+    apiProductionAccessToken:   string;
+    apiProductionClientId:      string;
+    apiProductionClientSecret:  string;
+    updatedAt:                  number;
+    createdAt:                  number;
 }
 
-export interface GlobalState {
-    APP_NAME:       string;
-    clicks:         number;
+export interface IActionPayload {
+    page:   number;
+    query?: reqQuery;
+    sort?:  any;
 }
 
-export interface GlobalAction {
-    type:           GlobalActionTypes;
-    payload:        any;
+export interface reqQuery {
+    payed?:             number;
+    createdAt?:         number;
+    _id?:               string;
+    shopifyOrderId?:    string;
+    checkoutId?:        string;
+    'customer.email'?:  string;
 }
 
-export enum GlobalActionTypes {
-    CHANGE_APP_NAME = 'CHANGE_APP_NAME',
-    ADD_CLICK = 'ADD_CLICK'
+// -------------- DUMMY INTERFACE
+export enum ResourceStatus {
+    PREPARING = 1,
+    IN_TRANSIT = 2,
+    DELIVERED = 3,
 }
 
-export interface GlobalMethods {
-    sumClick: () => void;
-}
-
-export interface GlobalStore {
-    state:      GlobalState;
-    methods:    GlobalMethods;
+export interface IResource {
+    _id:               string;
+    status:            ResourceStatus;
+    orderName:         string;
+    createdAt:         number | string | Date;
+    transactionAmount: number;
 }

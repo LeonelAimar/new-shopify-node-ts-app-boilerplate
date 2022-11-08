@@ -1,17 +1,19 @@
-import { resolve } from "path";
-import express from "express";
+import { resolve } from 'path';
+import express from 'express';
 import cookieParser from "cookie-parser";
+import mongoose from 'mongoose';
 import { Shopify, LATEST_API_VERSION } from "@shopify/shopify-api";
 import 'dotenv/config';
 
+import config, { initChecker } from './config/config'
 // Middlewares
 import { 
     setPolicyHeaders, validateIsInstalled,
     verifyRequest
-} from './middlewares/authHandlers.js';
-import { reqLogger } from "./middlewares/reqLogger.js";
+} from './middlewares/authHandlers';
+import { reqLogger } from "./middlewares/reqLogger";
 
-const USE_ONLINE_TOKENS = true;
+const USE_ONLINE_TOKENS = false;
 const TOP_LEVEL_OAUTH_COOKIE = "shopify_top_level_oauth";
 
 const isTest = process.env.NODE_ENV === "test" || !!process.env.VITE_TEST_BUILD;
@@ -39,7 +41,6 @@ class Server {
         this.PORT = Number(process.env.PORT || '8081')
         this.shopifyConfig()
         this.config()
-        this.routes()
     }
 
     async config() {
@@ -65,6 +66,10 @@ class Server {
 
         this.app.use(setPolicyHeaders);
         this.app.use("/*", validateIsInstalled);
+
+        this.app.use(express.json())
+        this.app.use(express.urlencoded({ extended: false }))
+        this.routes()
 
         await this.viteConfig()
     }
@@ -97,14 +102,13 @@ class Server {
 
     shopifyConfig() {
         Shopify.Context.initialize({
-            API_KEY: process.env.SHOPIFY_API_KEY,
-            API_SECRET_KEY: process.env.SHOPIFY_API_SECRET,
-            SCOPES: process.env.SCOPES.split(","),
-            HOST_NAME: process.env.HOST.replace(/https:\/\//, ""),
-            API_VERSION: LATEST_API_VERSION,
+            API_KEY: config.SHOPIFY_APP.API_KEY,
+            API_SECRET_KEY: config.SHOPIFY_APP.API_SECRET_KEY,
+            SCOPES: config.SHOPIFY_APP.SCOPES,
+            HOST_NAME: config.SHOPIFY_APP.HOST,
             IS_EMBEDDED_APP: true,
-            // This should be replaced with your preferred storage strategy
-            SESSION_STORAGE: new Shopify.Session.MemorySessionStorage(),
+            API_VERSION: LATEST_API_VERSION, // all supported versions are available, as well as "unstable" and "unversioned"
+            SESSION_STORAGE: new Shopify.Session.MemorySessionStorage()
         });
     }
 
@@ -140,7 +144,19 @@ class Server {
         });
     }
 
+    mongodbConfig() {
+        // MongoDB settings
+        mongoose.connect(config.DB.URI)
+        const db = mongoose.connection
+        db.on('error', error => console.error(error) )
+        db.on('open', async () => {
+            console.log('DB is connected from mongoose') 
+            await initChecker()
+        })
+    }
+
     start() {
+        this.mongodbConfig()
         this.app.listen(this.app.get('port'), () => {
             console.log('Environment => ', process.env.NODE_ENV)
             console.log('Server running on port: ', this.app.get('port'))
