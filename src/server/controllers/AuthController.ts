@@ -1,10 +1,11 @@
 import { AuthQuery, Shopify } from '@shopify/shopify-api';
 import { Request, Response } from 'express';
-import { server } from '../index.js'
-import CONFIG from '../config/config';
+import { server } from '../index'
 
+import WebhookController from './WebhookController';
+import Shop from '../models/ShopModel'
 // Helpers
-import topLevelAuthRedirect from '../helpers/top-level-auth-redirect.js';
+import topLevelAuthRedirect from '../helpers/top-level-auth-redirect';
 
 class AuthController {
     static async checkAndBegin( req: Request, res: Response ): Promise<void> {
@@ -15,8 +16,8 @@ class AuthController {
         const redirectUrl = await Shopify.Auth.beginAuth(
             req,
             res,
-            req.query.shop as string || CONFIG.SHOPIFY_APP.SHOP,
-            '/auth/callback',
+            req.query.shop as string,
+            "/auth/callback",
             server.app.get("use-online-tokens")
         );
       
@@ -47,32 +48,39 @@ class AuthController {
                 req,
                 res,
                 req.query as unknown as AuthQuery
-            );
+            )
       
-            const host = req.query.host;
+            const host = req.query.host
             server.app.set(
-                "active-shopify-shops",
-                Object.assign(server.app.get("active-shopify-shops"), {
+                'active-shopify-shops',
+                Object.assign(server.app.get('active-shopify-shops'), {
                     [session.shop]: session.scope,
                 })
-            );
+            )
       
-            const response = await Shopify.Webhooks.Registry.register({
-                shop: session.shop,
-                accessToken: session.accessToken,
-                topic: "APP_UNINSTALLED",
-                path: "/webhooks",
-            });
-      
-            if (!response["APP_UNINSTALLED"].success) {
-                console.log(
-                    `Failed to register APP_UNINSTALLED webhook: ${response.result}`
-                );
+            const { accessToken, shop } = session
+            const isInstalled = await Shop.findOne({ domain: shop })
+            
+            if ( !!!isInstalled ) {
+                const shopObj = new Shop({
+                    domain: shop,
+                    accessToken,
+                    ip: String(req.ip)
+                })
+    
+                await shopObj.save()
+                const registers = await WebhookController.registerInitialWebhooks( accessToken )
+    
+                const uninstallWbhResponse = registers.find(x => Object.keys(x).includes("APP_UNINSTALLED"))
+                if ( !uninstallWbhResponse.success ) {
+                    throw `Failed to register APP_UNINSTALLED webhook: ${uninstallWbhResponse.result}`
+                }
             }
-      
+
             // Redirect to app with shop parameter upon auth
             return res.redirect(`/?shop=${session.shop}&host=${host}`);
           } catch (e) {
+            console.log(e)
             switch (true) {
                 case e instanceof Shopify.Errors.InvalidOAuthError:
                     res.status(400);
