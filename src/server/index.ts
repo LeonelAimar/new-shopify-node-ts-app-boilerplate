@@ -1,7 +1,7 @@
 import { resolve } from "path";
 import express from "express";
 import cookieParser from "cookie-parser";
-import { Shopify, ApiVersion } from "@shopify/shopify-api";
+import { Shopify, LATEST_API_VERSION } from "@shopify/shopify-api";
 import 'dotenv/config';
 
 // Middlewares
@@ -23,6 +23,8 @@ const ACTIVE_SHOPIFY_SHOPS: object = {};
 // Routers
 import AuthRouter from "./routes/AuthRouter.js";
 import { routeBodyHandler } from "./middlewares/routeBodyHandler.js";
+import { ViteDevServer } from "vite";
+import ApiRouter from "./routes/ApiRouter.js";
 
 class Server {
     public app: express.Application;
@@ -64,43 +66,33 @@ class Server {
         this.app.use(setPolicyHeaders);
         this.app.use("/*", validateIsInstalled);
 
-        let vite;
-        if (this.IS_TEST) {
-            vite = await import("vite").then(({ createServer }) =>
-                createServer({
-                    root: this.ROOT_DIR,
-                    logLevel: isTest ? "error" : "info",
-                    server: {
-                        port: this.PORT,
-                        hmr: {
-                            protocol: "ws",
-                            host: "localhost",
-                            port: 64999,
-                            clientPort: 64999,
-                        },
-                        middlewareMode: "html",
-                    },
-                })
-            );
-            this.app.use(vite.middlewares);
-        } else {
-            const compression = await import("compression").then(
-                ({ default: fn }) => fn
-            );
-            const serveStatic = await import("serve-static").then(
-                ({ default: fn }) => fn
-            );
-            const fs = await import("fs");
-            this.app.use(compression());
-            this.app.use(serveStatic(resolve("dist/client")));
-            this.app.use("/*", (req, res, next) => {
-                // Client-side routing will pick up on the correct route to render, so we always render the index here
-                res
-                    .status(200)
-                    .set("Content-Type", "text/html")
-                    .send(fs.readFileSync(`${process.cwd()}/dist/client/index.html`));
-            });
+        await this.viteConfig()
+    }
+
+    async viteConfig() {
+        if ( !this.IS_TEST ) {
+            this.app.use(express.static(resolve(__dirname, 'public/')))
+            return
         }
+        
+        let vite: ViteDevServer;
+        vite = await import("vite").then(({ createServer }) =>
+            createServer({
+                root: this.ROOT_DIR,
+                logLevel: this.IS_TEST ? "error" : "info",
+                server: {
+                    port: Number(this.app.get('port')),
+                    hmr: {
+                        protocol: "ws",
+                        host: "localhost",
+                        port: 64999,
+                        clientPort: 64999,
+                    },
+                    middlewareMode: true,
+                },
+            })
+        );
+        this.app.use(vite.middlewares);
     }
 
     shopifyConfig() {
@@ -109,7 +101,7 @@ class Server {
             API_SECRET_KEY: process.env.SHOPIFY_API_SECRET,
             SCOPES: process.env.SCOPES.split(","),
             HOST_NAME: process.env.HOST.replace(/https:\/\//, ""),
-            API_VERSION: ApiVersion.April22,
+            API_VERSION: LATEST_API_VERSION,
             IS_EMBEDDED_APP: true,
             // This should be replaced with your preferred storage strategy
             SESSION_STORAGE: new Shopify.Session.MemorySessionStorage(),
@@ -117,6 +109,7 @@ class Server {
     }
 
     routes() {
+        this.app.use('/api/v1', ApiRouter);
         this.app.post("/graphql", verifyRequest(this.app), async (req, res) => {
             try {
                 const response = await Shopify.Utils.graphqlProxy(req, res);
