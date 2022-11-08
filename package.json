@@ -11,8 +11,8 @@
     "preserve": "npm run build",
     "serve": "cross-env NODE_ENV=production tsc && node dist/server/index.js",
     "start": "npm run serve",
-    "watch:server": "cross-env NODE_ENV=development && nodemon dist/server/index.js --watch ./dist/server",
-    "watch:server:prod": "cross-env NODE_ENV=production && nodemon dist/server/index.js",
+    "watch:server": "export NODE_ENV=development && nodemon dist/server/index.js --watch ./dist/server",
+    "watch:server:prod": "export NODE_ENV=production && nodemon dist/server/index.js",
     "dev": "run-p -sr ts watch:server",
     "test": "vitest --reporter=verbose"
   },
